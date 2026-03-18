@@ -30,6 +30,10 @@ const cookingSessionSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    mealImage: {
+      type: String,
+      default: '',
+    },
     // Duration in minutes
     duration: {
       type: Number,

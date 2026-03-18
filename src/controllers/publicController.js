@@ -49,6 +49,7 @@ function serializeSession(session) {
     id: obj._id,
     mealName: obj.mealName,
     mealDescription: obj.mealDescription,
+    mealImage: obj.mealImage,
     duration: obj.duration,
     status: obj.status,
     startTime: obj.startTime,

@@ -56,6 +56,7 @@ const createSession = async (req, res, next) => {
       mealId,
       mealName: meal.name,
       mealDescription: meal.description,
+      mealImage: meal.image || '',
       duration: duration || meal.defaultDuration,
       sessionDate: today,
       status: CookingSession.STATUS.NOT_STARTED,

@@ -35,6 +35,11 @@ const mealSchema = new mongoose.Schema(
     lastCookedAt: {
       type: Date,
     },
+    // Base64 compressed image (max ~4MB after compression)
+    image: {
+      type: String,
+      default: '',
+    },
     // Tags for better AI suggestions
     tags: [{
       type: String,

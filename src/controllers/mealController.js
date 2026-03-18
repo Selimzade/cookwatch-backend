@@ -35,7 +35,7 @@ const createMeal = async (req, res, next) => {
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { name, description, defaultDuration, tags } = req.body;
+    const { name, description, defaultDuration, tags, image } = req.body;
 
     // Check for duplicate name for this user
     const existing = await Meal.findOne({
@@ -43,7 +43,7 @@ const createMeal = async (req, res, next) => {
       name: { $regex: `^${name}$`, $options: 'i' },
     });
     if (existing) {
-      return res.status(409).json({ error: 'You already have a meal with that name' });
+      return res.status(409).json({ error: 'Bu adda yemək artıq mövcuddur' });
     }
 
     const meal = await Meal.create({
@@ -52,6 +52,7 @@ const createMeal = async (req, res, next) => {
       description: description || '',
       defaultDuration: defaultDuration || 30,
       tags: tags || [],
+      image: image || '',
     });
 
     res.status(201).json({ meal });
@@ -62,10 +63,10 @@ const createMeal = async (req, res, next) => {
 
 const updateMeal = async (req, res, next) => {
   try {
-    const { name, description, defaultDuration, tags } = req.body;
+    const { name, description, defaultDuration, tags, image } = req.body;
     const meal = await Meal.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      { name, description, defaultDuration, tags },
+      { name, description, defaultDuration, tags, image },
       { new: true, runValidators: true }
     );
     if (!meal) return res.status(404).json({ error: 'Meal not found' });

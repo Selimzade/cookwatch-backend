@@ -3,6 +3,7 @@ const http = require('http');
 const app = require('./src/app');
 const connectDB = require('./src/config/db');
 const { initSocket } = require('./src/services/socketService');
+const { verifyEmailConnection } = require('./src/services/emailService');
 
 const PORT = process.env.PORT || 5000;
 
@@ -12,10 +13,12 @@ const server = http.createServer(app);
 initSocket(server);
 
 // Connect to DB then start server
-connectDB().then(() => {
+connectDB().then(async () => {
   server.listen(PORT, () => {
     console.log(`CookWatch server running on port ${PORT} [${process.env.NODE_ENV}]`);
   });
+  // Verify email config (non-blocking)
+  await verifyEmailConnection();
 }).catch((err) => {
   console.error('Failed to connect to MongoDB:', err.message);
   process.exit(1);

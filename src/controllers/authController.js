@@ -36,24 +36,19 @@ const register = async (req, res, next) => {
       otpExpiry,
     });
 
-    // Send OTP — if email fails in dev, return OTP in response as a hint
-    let devOtp = null;
-    try {
-      await sendRegisterOtp(email, otp);
-    } catch (mailErr) {
-      console.error('Registration OTP email failed:', mailErr.message);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV] Registration OTP for ${email}: ${otp}`);
-        devOtp = otp; // expose in response only in dev/test
-      }
-    }
+    // Fire-and-forget — don't await, respond immediately
+    sendRegisterOtp(email, otp).catch((err) => {
+      console.error('Registration OTP email failed:', err.message);
+    });
 
+    // In dev/test always include OTP in response (email may not be configured)
+    const isDev = process.env.NODE_ENV !== 'production';
     res.status(201).json({
-      message: devOtp
-        ? `E-poçt göndərilmədi (dev rejimi). OTP: ${devOtp}`
+      message: isDev
+        ? 'OTP kodu aşağıda göstərilir (dev rejimi).'
         : 'OTP kodu e-poçtunuza göndərildi. Zəhmət olmasa yoxlayın.',
-      email: user.email,
-      ...(devOtp && { devOtp }),
+      email:  user.email,
+      ...(isDev && { devOtp: otp }),
     });
   } catch (err) { next(err); }
 };
@@ -125,22 +120,17 @@ const login = async (req, res, next) => {
       user.otpExpiry  = otpExpiry;
       await user.save();
 
-      let devOtp = null;
-      try {
-        await sendRegisterOtp(user.email, otp);
-      } catch (e) {
+      // Fire-and-forget
+      sendRegisterOtp(user.email, otp).catch((e) => {
         console.error('Resend OTP email failed:', e.message);
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[DEV] OTP for ${user.email}: ${otp}`);
-          devOtp = otp;
-        }
-      }
+      });
 
+      const isDev = process.env.NODE_ENV !== 'production';
       return res.status(403).json({
         error: 'Hesabınız hələ təsdiqlənməyib',
         requiresVerification: true,
         email: user.email,
-        ...(devOtp && { devOtp }),
+        ...(isDev && { devOtp: otp }),
       });
     }
 
@@ -169,16 +159,17 @@ const forgotPassword = async (req, res, next) => {
     user.resetOtpExpiry  = new Date(Date.now() + OTP_TTL_MS);
     await user.save();
 
-    try {
-      await sendResetOtp(user.email, otp);
-    } catch (e) {
+    // Fire-and-forget
+    sendResetOtp(user.email, otp).catch((e) => {
       console.error('Reset OTP email failed:', e.message);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV] Reset OTP for ${user.email}: ${otp}`);
-      }
-    }
+    });
 
-    res.json({ message: 'OTP kodu e-poçtunuza göndərildi', email: user.email });
+    const isDev = process.env.NODE_ENV !== 'production';
+    res.json({
+      message: isDev ? 'OTP kodu aşağıda göstərilir (dev rejimi).' : 'OTP kodu e-poçtunuza göndərildi',
+      email:   user.email,
+      ...(isDev && { devOtp: otp }),
+    });
   } catch (err) { next(err); }
 };
 

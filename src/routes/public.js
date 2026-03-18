@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getPublicView } = require('../controllers/publicController');
+const { getPublicView, placeOrder } = require('../controllers/publicController');
 const { publicViewLimiter } = require('../middleware/rateLimit');
 
-// Public route — no auth, rate-limited
-router.get('/view/:shareId', publicViewLimiter, getPublicView);
+router.get('/view/:shareId',   publicViewLimiter, getPublicView);
+router.post('/order/:shareId', publicViewLimiter, placeOrder);
 
 module.exports = router;

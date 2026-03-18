@@ -2,6 +2,8 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const CookingSession = require('../models/CookingSession');
+const MenuItem = require('../models/MenuItem');
+const Order    = require('../models/Order');
 
 let io = null;
 
@@ -51,14 +53,16 @@ function initSocket(httpServer) {
         const user = await User.findOne({ shareId }).select('_id username displayName');
         if (!user) return;
 
-        const today = new Date().toISOString().split('T')[0];
-        await CookingSession.autoComplete(user._id);
-        const sessions = await CookingSession.find({
-          userId: user._id,
-          sessionDate: today,
-        }).sort({ order: 1, createdAt: 1 });
+        const todayStr = new Date().toISOString().split('T')[0];
+        await Order.autoComplete(user._id);
 
-        socket.emit('sessions:update', { sessions });
+        const [menu, orders] = await Promise.all([
+          MenuItem.find({ userId: user._id, date: todayStr, isActive: true }).sort({ createdAt: 1 }),
+          Order.find({ userId: user._id, date: todayStr }).sort({ createdAt: 1 }),
+        ]);
+
+        socket.emit('menu:update',   { menu });
+        socket.emit('orders:update', { orders });
       } catch (err) {
         console.error('Error fetching initial state for viewer:', err.message);
       }
@@ -69,49 +73,36 @@ function initSocket(httpServer) {
     });
   });
 
-  // Broadcast session updates every 30s to keep timers in sync for edge cases
+  // Auto-complete expired orders every 30s and broadcast
   setInterval(() => {
-    autoCompleteAndBroadcast();
+    autoCompleteOrdersAndBroadcast();
   }, 30_000);
 
   return io;
 }
 
-async function autoCompleteAndBroadcast() {
+async function autoCompleteOrdersAndBroadcast() {
   try {
     const now = new Date();
-    const expiredSessions = await CookingSession.find({
-      status: 'cooking',
-      endTime: { $lte: now },
-    }).populate('userId', 'shareId');
+    const expired = await Order.find({ status: 'cooking', endTime: { $lte: now } })
+      .populate('userId', 'shareId');
 
-    if (expiredSessions.length === 0) return;
+    if (expired.length === 0) return;
 
-    const affectedShareIds = new Set();
-    for (const session of expiredSessions) {
-      session.status = 'completed';
-      await session.save();
-      if (session.userId?.shareId) {
-        affectedShareIds.add(session.userId.shareId);
-      }
+    const affected = new Set();
+    for (const o of expired) {
+      o.status = 'completed';
+      await o.save();
+      if (o.userId?.shareId) affected.add({ shareId: o.userId.shareId, userId: o.userId._id });
     }
 
-    // Broadcast updated sessions to affected rooms
-    for (const shareId of affectedShareIds) {
-      const user = await User.findOne({ shareId }).select('_id');
-      if (!user) continue;
-      const today = new Date().toISOString().split('T')[0];
-      const sessions = await CookingSession.find({
-        userId: user._id,
-        sessionDate: today,
-      }).sort({ order: 1, createdAt: 1 });
-
-      if (io) {
-        io.to(`user:${shareId}`).emit('sessions:update', { sessions });
-      }
+    for (const { shareId, userId } of affected) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const orders = await Order.find({ userId, date: todayStr }).sort({ createdAt: 1 });
+      if (io) io.to(`user:${shareId}`).emit('orders:update', { orders });
     }
   } catch (err) {
-    console.error('autoComplete broadcast error:', err.message);
+    console.error('autoComplete orders error:', err.message);
   }
 }
 

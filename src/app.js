@@ -4,10 +4,12 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const errorHandler = require('./middleware/errorHandler');
 
-const authRoutes = require('./routes/auth');
-const mealRoutes = require('./routes/meals');
+const authRoutes    = require('./routes/auth');
+const mealRoutes    = require('./routes/meals');
 const sessionRoutes = require('./routes/sessions');
-const publicRoutes = require('./routes/public');
+const menuRoutes    = require('./routes/menu');
+const orderRoutes   = require('./routes/orders');
+const publicRoutes  = require('./routes/public');
 
 const app = express();
 
@@ -24,10 +26,12 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/meals', mealRoutes);
+app.use('/api/auth',     authRoutes);
+app.use('/api/meals',    mealRoutes);
 app.use('/api/sessions', sessionRoutes);
-app.use('/api/public', publicRoutes);
+app.use('/api/menu',     menuRoutes);
+app.use('/api/orders',   orderRoutes);
+app.use('/api/public',   publicRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

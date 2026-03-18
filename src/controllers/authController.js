@@ -36,20 +36,24 @@ const register = async (req, res, next) => {
       otpExpiry,
     });
 
-    // Send OTP (don't fail registration if email fails — just log)
+    // Send OTP — if email fails in dev, return OTP in response as a hint
+    let devOtp = null;
     try {
       await sendRegisterOtp(email, otp);
     } catch (mailErr) {
       console.error('Registration OTP email failed:', mailErr.message);
-      // In dev, print OTP to console so developer can test without email
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[DEV] Registration OTP for ${email}: ${otp}`);
+        devOtp = otp; // expose in response only in dev/test
       }
     }
 
     res.status(201).json({
-      message: 'OTP kodu e-poçtunuza göndərildi. Zəhmət olmasa yoxlayın.',
+      message: devOtp
+        ? `E-poçt göndərilmədi (dev rejimi). OTP: ${devOtp}`
+        : 'OTP kodu e-poçtunuza göndərildi. Zəhmət olmasa yoxlayın.',
       email: user.email,
+      ...(devOtp && { devOtp }),
     });
   } catch (err) { next(err); }
 };
@@ -106,7 +110,14 @@ const login = async (req, res, next) => {
       return res.status(401).json({ error: 'E-poçt və ya şifrə yanlışdır' });
     }
 
-    // If user registered but hasn't verified yet → resend OTP + tell frontend
+    // Backward-compat: users who registered before OTP was introduced have
+    // isVerified=false but no otp set → auto-verify on first login.
+    if (!user.isVerified && !user.otp) {
+      user.isVerified = true;
+      await user.save();
+    }
+
+    // If user registered via new flow but hasn't verified yet → resend OTP
     if (!user.isVerified) {
       const otp       = generateOtp();
       const otpExpiry = new Date(Date.now() + OTP_TTL_MS);
@@ -114,12 +125,14 @@ const login = async (req, res, next) => {
       user.otpExpiry  = otpExpiry;
       await user.save();
 
+      let devOtp = null;
       try {
         await sendRegisterOtp(user.email, otp);
       } catch (e) {
         console.error('Resend OTP email failed:', e.message);
         if (process.env.NODE_ENV !== 'production') {
           console.log(`[DEV] OTP for ${user.email}: ${otp}`);
+          devOtp = otp;
         }
       }
 
@@ -127,6 +140,7 @@ const login = async (req, res, next) => {
         error: 'Hesabınız hələ təsdiqlənməyib',
         requiresVerification: true,
         email: user.email,
+        ...(devOtp && { devOtp }),
       });
     }
 

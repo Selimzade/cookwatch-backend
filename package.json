@@ -22,7 +22,6 @@
     "morgan": "^1.10.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.7.5",
-    "nodemailer": "^6.9.14",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

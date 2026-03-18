@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
     },
-    // Permanent share ID used for QR code - never changes
+    // Permanent share ID used for QR code — never changes
     shareId: {
       type: String,
       unique: true,
@@ -39,15 +39,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [50, 'Display name cannot exceed 50 characters'],
     },
-
-    // ── Email verification ─────────────────────────────────────────────────
-    isVerified:    { type: Boolean, default: false },
-    otp:           { type: String, select: false },   // 6-digit registration OTP
-    otpExpiry:     { type: Date,   select: false },
-
-    // ── Password reset ────────────────────────────────────────────────────
-    resetOtp:      { type: String, select: false },   // 6-digit reset OTP
-    resetOtpExpiry:{ type: Date,   select: false },
   },
   { timestamps: true }
 );
@@ -67,12 +58,12 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 // Return safe public profile
 userSchema.methods.toPublicProfile = function () {
   return {
-    id: this._id,
-    username: this.username,
-    email: this.email,
+    id:          this._id,
+    username:    this.username,
+    email:       this.email,
     displayName: this.displayName || this.username,
-    shareId: this.shareId,
-    createdAt: this.createdAt,
+    shareId:     this.shareId,
+    createdAt:   this.createdAt,
   };
 };
 

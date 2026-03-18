@@ -1,11 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const router  = express.Router();
-const {
-  register, verifyOtp, login,
-  forgotPassword, resetPassword,
-  getMe, getQRCode, updateProfile,
-} = require('../controllers/authController');
+const { register, login, getMe, getQRCode, updateProfile } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 
@@ -20,7 +16,6 @@ router.post(
   register
 );
 
-router.post('/verify-otp',      authLimiter, verifyOtp);
 router.post(
   '/login',
   authLimiter,
@@ -30,11 +25,9 @@ router.post(
   ],
   login
 );
-router.post('/forgot-password', authLimiter, forgotPassword);
-router.post('/reset-password',  authLimiter, resetPassword);
 
-router.get('/me',       protect, getMe);
-router.get('/qrcode',   protect, getQRCode);
+router.get('/me',        protect, getMe);
+router.get('/qrcode',    protect, getQRCode);
 router.patch('/profile', protect, updateProfile);
 
 module.exports = router;

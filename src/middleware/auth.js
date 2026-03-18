@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
 
 const protect = async (req, res, next) => {
@@ -8,36 +8,26 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
+    const token   = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(401).json({ error: 'User no longer exists' });
-    }
-    if (!user.isVerified) {
-      return res.status(403).json({ error: 'Hesabınız hələ təsdiqlənməyib', requiresVerification: true, email: user.email });
     }
 
     req.user = user;
     next();
   } catch (err) {
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
-    }
+    if (err.name === 'JsonWebTokenError')  return res.status(401).json({ error: 'Invalid token' });
+    if (err.name === 'TokenExpiredError')  return res.status(401).json({ error: 'Token expired' });
     next(err);
   }
 };
 
-const signToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
+const signToken = (userId) =>
+  jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  });
 
 module.exports = { protect, signToken };

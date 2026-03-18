@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt   = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const userSchema = new mongoose.Schema(
@@ -39,10 +39,17 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [50, 'Display name cannot exceed 50 characters'],
     },
+
+    // ── Email verification ─────────────────────────────────────────────────
+    isVerified:    { type: Boolean, default: false },
+    otp:           { type: String, select: false },   // 6-digit registration OTP
+    otpExpiry:     { type: Date,   select: false },
+
+    // ── Password reset ────────────────────────────────────────────────────
+    resetOtp:      { type: String, select: false },   // 6-digit reset OTP
+    resetOtpExpiry:{ type: Date,   select: false },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 // Hash password before save

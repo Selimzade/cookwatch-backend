@@ -72,6 +72,10 @@ const addMenuItem = async (req, res, next) => {
     const meal = await Meal.findOne({ _id: mealId, userId: req.user._id });
     if (!meal) return res.status(404).json({ error: 'Yemək tapılmadı' });
 
+    if (!menu.isAccepting) {
+      return res.status(403).json({ error: 'Bu menyu üçün sifariş başladığından dəyişiklik edilə bilməz' });
+    }
+
     const exists = await MenuItem.findOne({ menuId: menu._id, mealId });
     if (exists) return res.status(409).json({ error: 'Bu yemək artıq menyudadır' });
 
@@ -96,6 +100,10 @@ const removeMenuItem = async (req, res, next) => {
   try {
     const menu = await Menu.findOne({ _id: req.params.menuId, userId: req.user._id });
     if (!menu) return res.status(404).json({ error: 'Menyu tapılmadı' });
+
+    if (!menu.isAccepting) {
+      return res.status(403).json({ error: 'Bu menyu üçün sifariş başladığından dəyişiklik edilə bilməz' });
+    }
 
     const item = await MenuItem.findOneAndDelete({ _id: req.params.itemId, menuId: menu._id });
     if (!item) return res.status(404).json({ error: 'Menyu elementi tapılmadı' });

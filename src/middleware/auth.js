@@ -15,6 +15,9 @@ const protect = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ error: 'User no longer exists' });
     }
+    if (!user.isVerified) {
+      return res.status(403).json({ error: 'Hesabınız hələ təsdiqlənməyib', requiresVerification: true, email: user.email });
+    }
 
     req.user = user;
     next();

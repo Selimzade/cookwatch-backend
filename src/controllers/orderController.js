@@ -1,6 +1,7 @@
-const Order = require('../models/Order');
-const MenuItem = require('../models/MenuItem');
+const Order  = require('../models/Order');
+const Menu   = require('../models/Menu');
 const { getIO } = require('../services/socketService');
+const { broadcastMenus } = require('./menuController');
 
 const today = () => new Date().toISOString().split('T')[0];
 
@@ -21,7 +22,6 @@ const startOrder = async (req, res, next) => {
     if (order.status === Order.STATUS.COMPLETED) return res.status(400).json({ error: 'Artıq tamamlanıb' });
     if (order.status === Order.STATUS.CANCELLED) return res.status(400).json({ error: 'Sifariş ləğv edilib' });
 
-    // Use menu item's default duration unless body overrides
     const duration = req.body.duration || order.duration;
     const now = new Date();
     order.status    = Order.STATUS.COOKING;
@@ -29,6 +29,12 @@ const startOrder = async (req, res, next) => {
     order.startTime = now;
     order.endTime   = new Date(now.getTime() + duration * 60_000);
     await order.save();
+
+    // Close ordering for this menu so child can no longer add new orders
+    if (order.menuId) {
+      await Menu.findByIdAndUpdate(order.menuId, { isAccepting: false });
+      await broadcastMenus(req.user.shareId, req.user._id);
+    }
 
     await broadcastOrders(req.user.shareId, req.user._id);
     res.json({ order });
@@ -71,4 +77,4 @@ async function broadcastOrders(shareId, userId) {
   io.to(`user:${shareId}`).emit('orders:update', { orders });
 }
 
-module.exports = { getTodayOrders, startOrder, completeOrder, cancelOrder };
+module.exports = { getTodayOrders, startOrder, completeOrder, cancelOrder, broadcastOrders };

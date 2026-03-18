@@ -29,7 +29,7 @@ if (process.env.NODE_ENV !== 'test') {
 app.use('/api/auth',     authRoutes);
 app.use('/api/meals',    mealRoutes);
 app.use('/api/sessions', sessionRoutes);
-app.use('/api/menu',     menuRoutes);
+app.use('/api/menus',    menuRoutes);
 app.use('/api/orders',   orderRoutes);
 app.use('/api/public',   publicRoutes);
 

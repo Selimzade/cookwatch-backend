@@ -10,6 +10,7 @@ const STATUS = {
 const orderSchema = new mongoose.Schema(
   {
     userId:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    menuId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Menu', index: true },
     menuItemId: { type: mongoose.Schema.Types.ObjectId, ref: 'MenuItem', required: true },
 
     // Denormalized snapshot

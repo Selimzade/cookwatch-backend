@@ -1,9 +1,8 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const CookingSession = require('../models/CookingSession');
-const MenuItem = require('../models/MenuItem');
-const Order    = require('../models/Order');
+const User  = require('../models/User');
+const Menu  = require('../models/Menu');
+const Order = require('../models/Order');
 
 let io = null;
 
@@ -20,7 +19,7 @@ function initSocket(httpServer) {
   io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
-    // Authenticated users: join their own room via JWT
+    // Authenticated parent: join own room via JWT
     socket.on('auth:join', async (token) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -28,7 +27,7 @@ function initSocket(httpServer) {
         if (!user) return;
 
         socket.join(`user:${user.shareId}`);
-        socket.data.userId = user._id;
+        socket.data.userId  = user._id;
         socket.data.shareId = user.shareId;
         socket.emit('auth:joined', { shareId: user.shareId });
         console.log(`User ${user.username} joined room user:${user.shareId}`);
@@ -37,10 +36,9 @@ function initSocket(httpServer) {
       }
     });
 
-    // Public viewers: join a user's room via shareId (read-only)
+    // Public viewer: join a user's room via shareId (read-only)
     socket.on('view:join', async (shareId) => {
       if (!shareId || typeof shareId !== 'string') return;
-      // Sanitize shareId — must be a valid UUID format
       const isValidShareId = /^[0-9a-f-]{36}$/.test(shareId);
       if (!isValidShareId) return;
 
@@ -50,18 +48,18 @@ function initSocket(httpServer) {
 
       // Send current state immediately on join
       try {
-        const user = await User.findOne({ shareId }).select('_id username displayName');
+        const user = await User.findOne({ shareId }).select('_id');
         if (!user) return;
 
         const todayStr = new Date().toISOString().split('T')[0];
         await Order.autoComplete(user._id);
 
-        const [menu, orders] = await Promise.all([
-          MenuItem.find({ userId: user._id, date: todayStr, isActive: true }).sort({ createdAt: 1 }),
+        const [menus, orders] = await Promise.all([
+          Menu.find({ userId: user._id, date: todayStr }).sort({ createdAt: 1 }),
           Order.find({ userId: user._id, date: todayStr }).sort({ createdAt: 1 }),
         ]);
 
-        socket.emit('menu:update',   { menu });
+        socket.emit('menus:update',  { menus });
         socket.emit('orders:update', { orders });
       } catch (err) {
         console.error('Error fetching initial state for viewer:', err.message);
@@ -73,7 +71,7 @@ function initSocket(httpServer) {
     });
   });
 
-  // Auto-complete expired orders every 30s and broadcast
+  // Auto-complete expired orders every 30s
   setInterval(() => {
     autoCompleteOrdersAndBroadcast();
   }, 30_000);
@@ -83,7 +81,7 @@ function initSocket(httpServer) {
 
 async function autoCompleteOrdersAndBroadcast() {
   try {
-    const now = new Date();
+    const now     = new Date();
     const expired = await Order.find({ status: 'cooking', endTime: { $lte: now } })
       .populate('userId', 'shareId');
 

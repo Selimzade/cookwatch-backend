@@ -4,15 +4,27 @@ const aiService = require('../services/aiService');
 
 const getMeals = async (req, res, next) => {
   try {
-    const { search, sort = '-timesCooked' } = req.query;
+    const { search, category, sort = '-timesCooked' } = req.query;
     const query = { userId: req.user._id };
 
-    if (search) {
-      query.name = { $regex: search, $options: 'i' };
-    }
+    if (search)   query.name     = { $regex: search, $options: 'i' };
+    if (category) query.category = category;
 
     const meals = await Meal.find(query).sort(sort).limit(100);
     res.json({ meals });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/meals/categories — distinct categories for this user
+const getCategories = async (req, res, next) => {
+  try {
+    const cats = await Meal.distinct('category', {
+      userId: req.user._id,
+      category: { $ne: '' },
+    });
+    res.json({ categories: cats.sort() });
   } catch (err) {
     next(err);
   }
@@ -35,7 +47,7 @@ const createMeal = async (req, res, next) => {
       return res.status(400).json({ error: errors.array()[0].msg });
     }
 
-    const { name, description, defaultDuration, tags, image } = req.body;
+    const { name, description, defaultDuration, tags, image, category } = req.body;
 
     // Check for duplicate name for this user
     const existing = await Meal.findOne({
@@ -53,6 +65,7 @@ const createMeal = async (req, res, next) => {
       defaultDuration: defaultDuration || 30,
       tags: tags || [],
       image: image || '',
+      category: category?.trim() || '',
     });
 
     res.status(201).json({ meal });
@@ -63,10 +76,10 @@ const createMeal = async (req, res, next) => {
 
 const updateMeal = async (req, res, next) => {
   try {
-    const { name, description, defaultDuration, tags, image } = req.body;
+    const { name, description, defaultDuration, tags, image, category } = req.body;
     const meal = await Meal.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      { name, description, defaultDuration, tags, image },
+      { name, description, defaultDuration, tags, image, category: category?.trim() || '' },
       { new: true, runValidators: true }
     );
     if (!meal) return res.status(404).json({ error: 'Meal not found' });
@@ -147,6 +160,7 @@ const suggestDuration = async (req, res, next) => {
 module.exports = {
   getMeals,
   getMeal,
+  getCategories,
   createMeal,
   updateMeal,
   deleteMeal,

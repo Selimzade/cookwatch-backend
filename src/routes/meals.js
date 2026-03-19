@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   getMeals,
   getMeal,
+  getCategories,
   createMeal,
   updateMeal,
   deleteMeal,
@@ -17,9 +18,10 @@ const { apiLimiter } = require('../middleware/rateLimit');
 router.use(protect);
 router.use(apiLimiter);
 
-router.get('/', getMeals);
+router.get('/',            getMeals);
+router.get('/categories',  getCategories);
 router.get('/suggestions', getSuggestions);
-router.get('/:id', getMeal);
+router.get('/:id',         getMeal);
 
 router.post(
   '/',

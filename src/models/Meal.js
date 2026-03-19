@@ -40,6 +40,13 @@ const mealSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Category (e.g. "İçki", "Əsas Yemək", "Desert")
+    category: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Category cannot exceed 50 characters'],
+      default: '',
+    },
     // Tags for better AI suggestions
     tags: [{
       type: String,

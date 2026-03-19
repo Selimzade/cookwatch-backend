@@ -70,6 +70,10 @@ const placeOrder = async (req, res, next) => {
     const item = await MenuItem.findOne({ _id: menuItemId, menuId: menu._id });
     if (!item) return res.status(404).json({ error: 'Menyu elementi tapılmadı' });
 
+    // One order per menu item — regardless of status (even if cancelled)
+    const existing = await Order.findOne({ menuItemId: item._id, date: today() });
+    if (existing) return res.status(409).json({ error: 'Bu yemək artıq sifariş edilib' });
+
     const order = await Order.create({
       userId:          user._id,
       menuId:          menu._id,
